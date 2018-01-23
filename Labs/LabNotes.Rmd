@@ -5,4 +5,5 @@ author: "Juan Carlos Villaseñor-Derbez"
 output: html_document
 ---
 
-- [Lab 1](./Lab1/Lab1.html)
+- [Lab 1 - Intro to R and R Studio](./Lab1/Lab1.html)
+- [Lab 2 - Intro to linear regression](./Lab2/Lab2.html)

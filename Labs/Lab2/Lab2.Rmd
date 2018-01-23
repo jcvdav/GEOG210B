@@ -1,0 +1,198 @@
+---
+title: "Lab 2"
+subtitle: "Intro to linear regression"
+author: "Juan Carlos Villaseñor-Derbez"
+date: "23 de enero de 2018"
+output:
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load packages
+
+```{r}
+suppressPackageStartupMessages({
+  library(stargazer)
+  library(ggfortify)
+  library(tidyverse)
+})
+```
+
+
+```{r}
+SmallHHfile <- read.csv("../Lab1/SmallHHfile.csv", header=TRUE)
+```
+
+# Describe data
+
+## Look at the structure of the file
+
+```{r, results = "asis"}
+skimr::skim(SmallHHfile)
+```
+
+
+## Summary statistics with `stargazer`
+
+```{r}
+stargazer(SmallHHfile, type = "text", title="Descriptive statistics", median=TRUE, digits=2, out="table1.txt")
+```
+
+## Fit a model
+
+```{r, results = "asis"}
+#  The model in slides 28 and 29 from lecture
+HHPMT.lm = lm(TotDist ~ HHSIZ , data=SmallHHfile)
+stargazer(HHPMT.lm, single.row = T, type = "html")
+```
+
+```{r}
+anova(HHPMT.lm) # for slide 33 in lecture notes
+```
+
+# Simple comparison of means and sample size example (about slide 70 of intro to regression)
+
+## `n = 10`
+
+### Sample ten random values from `SmallHHFile`
+
+```{r}
+TEN <- SmallHHfile[sample(nrow(SmallHHfile), 10), ] # randomly draw a sample of ten rows from SmallHHfile
+```
+
+### Obtain descriptive parameters
+
+```{r}
+xbar10 <- mean(TEN$MilesPr)            # sample mean 
+mu0 <- mean(SmallHHfile$MilesPr)             # hypothesized value 
+sigma <- sd(SmallHHfile$MilesPr)            # population standard deviation 
+n <- nrow(TEN)                 # sample size 
+
+(z10 <-  (xbar10-mu0)/(sigma/sqrt(n)))
+```
+
+### compute critical values at 5% significance
+
+```{r}
+alpha = .05 # set the confidence level we want
+z.half.alpha = qnorm(1 - alpha/2) # area under the normal curve 
+c( -z.half.alpha, z.half.alpha)  #critical values
+```
+
+### Repeat with `n = 100`
+
+```{r}
+HUNDRED <- SmallHHfile[sample(nrow(SmallHHfile), 100), ] # randomly draw a sample of ten rows from SmallHHfile
+```
+
+### Obtain descriptive parameters
+
+```{r}
+xbar100 <- mean(HUNDRED$MilesPr)            # sample mean 
+mu0 <- mean(SmallHHfile$MilesPr)             # hypothesized value 
+sigma <- sd(SmallHHfile$MilesPr)            # population standard deviation 
+n <- nrow(HUNDRED)                 # sample size 
+
+(z100 <- (xbar100-mu0)/(sigma/sqrt(n)))
+```
+
+### compute critical values at 5% significance
+
+```{r}
+alpha = .05 # set the confidence level we want
+z.half.alpha = qnorm(1 - alpha/2) # area under the normal curve 
+c( -z.half.alpha, z.half.alpha)  #critical values
+```
+
+## When $\sigma$ is unknown
+
+We use a t-distribution
+
+```{r}
+
+xbar10 <- mean(TEN$MilesPr)            # sample mean 
+mu0 <- mean(SmallHHfile$MilesPr)             # hypothesized value 
+s10 <- sd(TEN$MilesPr)            # population standard deviation 
+n <- nrow(TEN) 
+
+# test statistic for TEN
+(t10 = (xbar10-mu0)/(s10/sqrt(n)))
+
+```
+
+### compute critical values at 5% significance
+
+```{r}
+# the above shows a z = -1.31147
+alpha <-  .05 
+t.half.alpha <-  qt(1 - alpha/2, df=n-1) 
+c(- t.half.alpha, t.half.alpha) 
+```
+
+# Linear regression models in R (one explanatory variable)
+
+## Inspect the model that we fit earlier
+
+```{r}
+HHPMT.fit = fitted(HHPMT.lm)
+plot(SmallHHfile$HHSIZ, HHPMT.fit, type="b" )
+```
+
+## Inspect with data
+
+```{r}
+plot(TotDist ~ HHSIZ, data = SmallHHfile)
+abline(HHPMT.lm)
+```
+
+```{r}
+cool1 <- ggplot(SmallHHfile, aes(x=HHSIZ, y=TotDist)) + geom_point(shape=1) + geom_smooth(method=lm)
+cool1 <- cool1 + scale_x_continuous(name = "Household Size") +
+  scale_y_continuous(name = "Miles Travelled in a Day by each household")
+cool1
+
+# add a title to the graph
+cool1 <- cool1+ ggtitle("Miles travelled Regression Line in CHTS 43431 households")
+
+# use annotate to add a box with the regression coefficients and R square
+cool1<- cool1 + annotate("rect", xmin = 7, xmax = 8, ymin = 4000, ymax = 6000, fill="white", colour="red") +
+  annotate("text", x=7.5, y=4500, label = "R^2 == 0.06", parse=T) + annotate("text", x=7.5, y=5500, label = "alpha == 12.2", parse=T) +
+  annotate("text", x=7.5, y=5000, label = "beta == 21.7", parse=T)
+cool1
+
+
+# The following will create an object called equation fro the linear regression lm object and also extract the r-square
+
+equation = function(x) {
+  lm_coef <- list(a = round(coef(x)[1], digits = 3),
+                  b = round(coef(x)[2], digits = 3),
+                  r2 = round(summary(x)$r.squared, digits = 2));
+  lm_eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(R)^2~"="~r2,lm_coef)
+  as.character(as.expression(lm_eq));                 
+}
+
+# then we insert in the cool graph the equation from the object lm
+
+cool1 <- cool1 + annotate("text", x = 2, y = 5000, label = equation(HHPMT.lm), parse = TRUE)
+cool1
+```
+
+```{r}
+autoplot(HHPMT.lm, label.size = 3)
+```
+
+
+
+
+
+
+
+
+
+
