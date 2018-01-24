@@ -1,0 +1,34 @@
+---
+title: "GEOG 210B"
+subtitle: "Class notes"
+author: "Juan Carlos Villaseñor-Derbez"
+output: html_document
+---
+
+# Labs
+
+- [Lab 1](./Labs/Lab1/Lab1.html) - Intro to R and R Studio
+- [Lab 2](./Labs/Lab2/Lab2.html) - Intro to linear regression
+
+# Assignments
+
+- [Assignment 1](./Assignments/Assig1/Assig1.pdf) - Intro to linear regression
+    - [code](./Assignments/Assig1/Assig1.Rmd)
+
+# Lectures
+
+- [Lecture 1](Lecture1.pdf) - Introduction
+- [Lecture 2](Lecture2.pdf) - Random variables and PDFs
+- [Lecture 3](Lecture3 - Linear regression intro.pdf) - Intro to linear regression
+- [Lecture 4](Lecture4 - Matrix.pdf) - Matrix notation and regression decomposition
+- [Lecture 5]() - 
+- [Lecture 6]() - 
+- [Lecture 7]() - 
+- [Lecture 8]() - 
+- [Lecture 9]() - 
+- [Lecture 10]() - 
+- [Lecture 11]() - 
+- [Lecture 12]() - 
+- [Lecture 13]() - 
+- [Lecture 14]() - 
+- [Lecture 15]() - 

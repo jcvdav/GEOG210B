@@ -1,0 +1,189 @@
+---
+title: "Assignment 1"
+subtitle: "Linear	Regression with	R"
+author: "Juan Carlos Villaseñor-Derbez"
+date: "January 26, 2018"
+bibliography: "../references.bib"
+output:
+  bookdown::pdf_document2: default
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, fig.height = 4, fig.width = 6)
+```
+
+```{r}
+suppressPackageStartupMessages({
+  library(broom)
+  library(tidyverse)
+})
+```
+
+
+# Descriptive statistics of `SmallHHfile.csv` data
+
+Using the `describe()` function from the `psych` package [@psych] we can get a table of summary statistics (Table \ref{table:desc_table}).
+
+```{r}
+# Read the data
+SmallHHfile <- read_csv("../../Labs/Lab1/SmallHHfile.csv", col_types = cols())
+```
+
+```{r}
+# Obtain descriptive statistics and create a nice-looking table
+psych::describe(SmallHHfile) %>% 
+  knitr::kable(digits = 3, booktabs = T, format = "latex", caption = "\\label{table:desc_table}Descriptive summary statistics of the SmallHHfile data.") %>% 
+  kableExtra::kable_styling(latex_options = c("striped", "scale_down")) %>% 
+  kableExtra::landscape()
+```
+
+# Estimate model \ref{eq:model1}
+
+Coefficients in model \ref{eq:model1} were estimated via ordinary least squares with the `lm()` function in R [@R].
+
+```{r, echo = T}
+model1 <- lm(formula = MilesPr ~ Mon + Tue + Wed + Thu + Fri + Sat
+             + HHVEH + HHSIZ + suburb + exurb + rural, data = SmallHHfile)
+```
+
+## Report model \ref{eq:model1}
+
+Estimated coefficients and their respective standard error and t-statistics, as well as information on model fit are presented in Table \ref{table:reg_table}. 
+
+```{r}
+glance <- broom::glance(model1)
+F_wald <- lmtest::waldtest(model1)
+
+RSE <- paste0(formatC(glance$sigma, digits = 3, format = "f"), " (df = ", glance$df.residual, ")")
+
+R2 <- formatC(glance$r.squared, digits = 3, format = "f")
+
+F_stat <- paste0(formatC(F_wald$F[2], digits = 3, format = "f"),
+                 "*** ",
+                 "(df = ",
+                 F_wald$Res.Df[2]-F_wald$Res.Df[1], "; ",
+                 F_wald$Res.Df[1],
+                 ")")
+
+N <- nobs(model1)
+
+descriptors <- data.frame(term = c("Obs.", "RSE", "R2", "F Statistic"),
+                          estimate = c(N, RSE, R2, F_stat),
+                          statistic = "")
+  
+broom::tidy(model1) %>% 
+  mutate(p1 = ifelse(p.value < 0.1, "*", ""),
+         p2 = ifelse(p.value < 0.05, "*", ""),
+         p3 = ifelse(p.value < 0.01, "*", ""),
+         statistic = paste0(formatC(statistic, digits = 3, format = "f"), " ", p1, p2, p3),
+         estimate = paste0(formatC(estimate, digits = 3, format = "f"), " (",formatC(std.error, digits = 3, format = "f"), ")")) %>% 
+  select(term, estimate, statistic) %>% 
+  rbind(descriptors) %>% 
+  knitr::kable(format = "latex",
+               booktabs = T,
+               col.names = c("Variable", "Estimate", "t-statistic"),
+               caption = "\\label{table:reg_table}Ordinary least square estimates for coefficients in model \\ref{eq:model1}.") %>% 
+  kableExtra::kable_styling(latex_options = c("hold_position")) %>% 
+  kableExtra::row_spec(12, hline_after = T) %>% 
+  kableExtra::footnote(general = c("*p<0.1; **p<0.05; ***p<0.01", "Numbers in parentheses represent standard errors"))
+```
+
+
+## Equation for model \ref{eq:model1}
+
+\begin{multline}
+MilesPr = \beta_0 + \beta_1 Mon	+	\beta_2 Tue	+	\beta_3 Wed	+	\beta_4 Thu	+	\beta_5 Fri+	\beta_6 Sat \\ + \beta_7 HHVEH	+	\beta_8 HHSIZ +	\beta_9 suburb + \beta_{10} exurb+	\beta_{11} rural +\epsilon
+\label{eq:model1}
+\end{multline}
+
+\clearpage
+
+## Summay of model \ref{eq:model1}
+
+Model \ref{eq:model1} describes the relationship between `MilesPr` and a number of explanatory variables. On its current specification, the included variables explain 1.9% of the variance in `MilesPr` (R^2 = 0.019; *F*(11, 42419) = 74.030; *p* < 0.01). Among the included variables, the day of the week (Sun - Sat) captures the average change in `MilesPr` depending on the day. From table \ref{table:desc_table}, we observe that Friday and Saturday significantly increase `MilesPr` by 3.78 and 3.56 miles, respectively (*p* < 0.01), as compared to the reference level (Sunday, living in the center of the city). The estimates for all other days of the week imply that they are not significantly different from zero, and thus have no significant effect on `MilesPr` (*p* > 0.05). The number of vehicles in the household (`HHVEH`) had a strong positive effect on `MilesPr`, indicating a marginal increase of 4.89 miles per vehicle (*p* < 0.01). Conversely, household size (`HHSIZ`) had a mild negative effect on `MilesPr`, indicating a reduction in `MilesPr` for the addition of a person to the household (*p* < 0.01). Households further away from the city center also tend to travel more miles. Consistently, miles traveled per person follow `rural` > `exurb` > `suburb` (*p* < 0.01).
+
+Under this model specification, the model suggests the following:
+
+- People travel larger distances Friday and Saturdays (likely as leisure)
+- The positive relationship observed between miles per person and number of cars in the household suggest that more cars enable a individuals from a household to travel more.
+- However, an increase in household size resulted in a decrease in miles traveled per person. Without accounting for income or interactions with other variables, we are unable to draw conclusions from the observed model.
+- Finally, people further away from the city center have larger per capita travel distances.
+
+\clearpage
+
+# Estimate model \ref{eq:model2}
+
+\begin{multline}
+HTRIPS = \beta_0 + \beta_2 HHSIZ + \beta_3 HHVEH + \beta_4 TrpPrs + \beta_5 INCOM \\ + \beta_6 Mon + \beta_7 Tue + \beta_8 Wed + \beta_9 Thu + \beta_{10} Fri + \beta_{11} Sat +\epsilon
+\label{eq:model2}
+\end{multline}
+
+```{r}
+model2 <- lm(formula = HTRIPS ~ HHSIZ + HHVEH + TrpPrs +INCOM
+             + Mon + Tue + Wed + Thu + Fri + Sat , data = SmallHHfile)
+```
+
+
+## Report model \ref{eq:model2}
+
+```{r}
+glance <- broom::glance(model2)
+F_wald <- lmtest::waldtest(model2)
+
+RSE <- paste0(formatC(glance$sigma, digits = 3, format = "f"), " (df = ", glance$df.residual, ")")
+
+R2 <- formatC(glance$r.squared, digits = 3, format = "f")
+
+F_stat <- paste0(formatC(F_wald$F[2], digits = 3, format = "f"),
+                 "*** ",
+                 "(df = ",
+                 F_wald$Res.Df[2]-F_wald$Res.Df[1], "; ",
+                 F_wald$Res.Df[1],
+                 ")")
+
+N <- nobs(model2)
+
+descriptors <- data.frame(term = c("Obs.", "RSE", "R2", "F Statistic"),
+                          estimate = c(N, RSE, R2, F_stat),
+                          statistic = "")
+  
+broom::tidy(model2) %>% 
+  mutate(p1 = ifelse(p.value < 0.1, "*", ""),
+         p2 = ifelse(p.value < 0.05, "*", ""),
+         p3 = ifelse(p.value < 0.01, "*", ""),
+         statistic = paste0(formatC(statistic, digits = 3, format = "f"), " ", p1, p2, p3),
+         estimate = paste0(formatC(estimate, digits = 3, format = "f"), " (",formatC(std.error, digits = 3, format = "f"), ")")) %>% 
+  select(term, estimate, statistic) %>% 
+  rbind(descriptors) %>% 
+  knitr::kable(format = "latex",
+               booktabs = T,
+               col.names = c("Variable", "Estimate", "t-statistic"),
+               caption = "\\label{table:reg_table2}Ordinary least square estimates for coefficients in model \\ref{eq:model2}.") %>% 
+  kableExtra::kable_styling(latex_options = c("hold_position")) %>% 
+  kableExtra::row_spec(11, hline_after = T) %>% 
+  kableExtra::footnote(general = c("*p<0.1; **p<0.05; ***p<0.01", "Numbers in parentheses represent standard errors"))
+```
+
+## Comparing model \ref{eq:model1} and model \ref{eq:model2}
+
+Model \ref{eq:model1} focused on identifying how *per capita* distance travaled by household depended on a series of explanatory variables. In this case, model \ref{eq:model2} estimates the effect that a set of variables have on the number of trips (ignoring the length of the trip) that a household does. This model explains 82% of the variance in `HTRIPS` (R^2^ = 0.82; *F* (10, 42420) = 19321.927; *p* < 0.01).
+
+The intercept estimate explains the mean effect of a Sunday, indicating that people perform less trips this day (perhaps less but longer trips, considering results of \ref{eq:model1}). In this case, we identify that people do more trips Tue - Fri, with similar coefficient estimates, as compared to the baseline of a Sunday. Perhaps this reflects a monotonous behaviour in day-to-day activities during week days. Finally, household size and the number of trips per person had a positive effect on the number of trips that the household did (*p* , 0.01), while income and number of household vehicles had no apparent effect (*p* > 0.01).
+
+\clearpage
+
+# Other packages used
+
+- `broom` [@broom]
+- `lmtest` [@lmtest]
+- `tidyverse` [@tidyverse]
+- `knitr` [@knitr]
+- `kableExtra` [@kableExtra]
+
+# References
+
+
