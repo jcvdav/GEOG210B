@@ -176,6 +176,12 @@ The intercept estimate explains the mean effect of a Sunday, indicating that peo
 
 \clearpage
 
+# Source code
+
+Source code for this work can be found in the online github repository:
+
+[https://github.com/jcvdav/GEOG210B/blob/master/Assignments/Assig1/Assig1.Rmd](https://github.com/jcvdav/GEOG210B/blob/master/Assignments/Assig1/Assig1.Rmd)
+
 # Other packages used
 
 - `broom` [@broom]
