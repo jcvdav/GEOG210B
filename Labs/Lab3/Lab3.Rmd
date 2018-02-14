@@ -1,0 +1,561 @@
+---
+title: "Spatial Stats Part 1 new updated version"
+author: "Kostas Goulias"
+date: "2/13/2018"
+output:
+  html_document: default
+  always_allow_html: yes
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a shortened version of the lab instructions eliminating a few statwide analyses
+
+### Part 1 Preliminary Work Setting Up Analysis of Census Block Groups
+
+A few important libraries for spatial analysis are:
+
+install.packages("maptools", dependencies = TRUE)
+install.packages("spdep", dependencies = TRUE)
+install.packages("leaflet", dependencies = TRUE)
+install.packages("RColorBrewer", dependencies = TRUE)
+
+```{r}
+library(spdep)
+library(maptools)
+library(leaflet)
+library(RColorBrewer)
+```
+
+Read the data by setting the directory to point at the right place
+You will need to download a shp file from Gauchospace and save it in this directory
+```{r}
+CA.poly <- readShapePoly(fn = './shp/LPA_Pop_Char_bg.shp')
+```
+
+We use the function class to verify the we have a spatial polygons data frame
+```{r}
+class(CA.poly)
+```
+
+A SpatialPolygonsDataFrame object brings together the spatial representations of the polygons  with data. 
+data:
+  Object of class "data.frame"; attribute table
+polygons:
+  Object of class "list"; see SpatialPolygons-class
+plotOrder:
+  Object of class "integer"; see SpatialPolygons-class
+bbox:
+ Object of class "matrix"; see Spatial-class
+proj4string:
+  Object of class "CRS"; see CRS-class
+
+ The identifying tags of the polygons in the slot are matched with the row names of the data frame to make sure that the correct data rows are associated with the correct spatial object. 
+In this example we have US Census block groups and for each block group we have added the behvior of people
+ and the chractersitics of the households and persons
+  
+A Spatial Polygon Data Frame has four components (in the R jargon these called slots)
+
+  Component 1: Data contains the variables that are used in the analysis such as number of households with zero cars, vehicle miles of travel.  remember these are at the block group level
+  
+```{r, eval = F}
+str(slot(CA.poly, "data"))
+summary(slot(CA.poly, "data"))
+```
+This shows an output like : 'data.frame':	23198 obs. of  105 variables:
+
+Component 2:  This is the polygon slot and contains the “shape” information. 
+
+The following will create a map of all the polygons representing block groups
+```{r}
+plot(CA.poly)
+```
+
+Analysis of the data in these blockgroups
+
+```{r, eval = F}
+summary(CA.poly)
+```
+
+Component 3:  this is the bobox (bounding box of coordinates that is drawn around the boundaries of CA)
+Component 4:  Is the proj4string that contains the projections. 
+
+The @ is used to access a specific slot of the spatial data frame
+
+Operations on a column of data is allowed as usual
+
+```{r}
+summary(CA.poly@data$VMT)
+CA.poly@data$VMTpr = CA.poly@data$VMT/CA.poly@data$n_pr
+summary(CA.poly@data$VMTpr)
+```
+
+
+First define dummy variables that are based on the type of land use in each block group
+
+```{r}
+
+CA.poly@data$center = CA.poly@data$LPAgrp == 4
+CA.poly@data$suburb = CA.poly@data$LPAgrp == 3
+CA.poly@data$exurb = CA.poly@data$LPAgrp == 2
+CA.poly@data$rural = CA.poly@data$LPAgrp == 1
+CA.poly@data$none = CA.poly@data$LPAgrp == 0
+```
+
+Then estimate a regression model.  
+
+```{r}
+
+VMTprOLS<-lm(VMTpr~suburb+exurb+rural+HHVEH0+HHVEH1+HHVEH2+HHVEH3+HHVEH4+HHVEH5+HHVEH6+HHAGE7, data=CA.poly@data)
+
+VMTprOLS
+summary(VMTprOLS)
+```
+
+
+Test the residuals from this regression model
+
+```{r}
+library(lmtest)
+library(sandwich) # I need this for the robust vcov matrix
+```
+
+```{r}
+
+coeftest(VMTprOLS, vcov = vcovHC(VMTprOLS, type = "const")) # this is the same as in least squares with no White adjsustment
+coeftest(VMTprOLS, vcov = vcovHC(VMTprOLS, type = "HC0")) # this is the traditional White's adjustment to the var-Cov of the coefficient estimates
+
+# the following are other versions of computing the variance matrix of coefficient estimates
+coeftest(VMTprOLS, vcov = vcovHC(VMTprOLS, type = "HC1")) # this is improved White's adjustment 
+coeftest(VMTprOLS, vcov = vcovHC(VMTprOLS, type = "HC2")) # this is another improved White's adjustment 
+coeftest(VMTprOLS, vcov = vcovHC(VMTprOLS, type = "HC3")) # this is the third improvement
+coeftest(VMTprOLS, vcov = vcovHC(VMTprOLS, type = "HC4")) # this is the fourth improvement 
+```
+
+
+```{r}
+bptest(VMTprOLS, studentize=FALSE )   # the original BP test Page 62 class notes
+bptest(VMTprOLS, studentize=TRUE)     # the studentized version that is more robust to non-normal residuals
+```
+
+If I run a typical serial correlation test, I may find that there is no correlation between pairs of rows
+We will check this later
+
+```{r}
+dwtest(VMTprOLS)
+```
+
+### Part 2 Extract Riverside County Data to Perform Analysis of Census Block Groups
+
+
+
+We can select a portion of the data.  For example, selecting two counties
+TWOCOUNTY <- CA.poly[CA.poly@data$countyname== c("Riverside" , "Impreial"), ]
+
+For the class example I just want to work with one county
+
+```{r}
+YCOUNTY <- CA.poly[CA.poly@data$countyname== c("Riverside"), ]
+```
+
+Then I want to know what is in the data slot of this county
+If you just run YCOUNTY@data you will get all the records - Try just for fun
+
+
+You can give this instruction to look at the content of the data (not run here to keep output small)
+
+summary(YCOUNTY@data)
+
+
+Let's estimate the same regression model we estimated for the entire State of California
+
+```{r}
+
+VMTprOLSRiver<-lm(VMTpr~suburb+exurb+rural+HHVEH0+HHVEH1+HHVEH2+HHVEH3+HHVEH4+HHVEH5+HHVEH6+HHAGE7, data=YCOUNTY@data)
+
+summary(VMTprOLSRiver)
+
+```
+
+
+This model is different than what we got using the entire State (see the coefficient for exurbTRUE and compare it to suburbTRUE)
+
+You can also do the BP and DW tests and see what you get but we can do some other more intersting things.
+
+Building Neighborhoods Using Contiguity Rules.  The example below uses queen moves (from Chess) to build links among block groups
+It also creates centroids as centers of "gravity"
+
+In R this function is poly2nb
+
+This builds a neighbours list based on regions with contiguous boundaries.  queen=T allows even for a single polygon neighbor to meet the contiguity condition.
+
+```{r}
+list.queenY<-poly2nb(YCOUNTY, queen=T)
+coordsY<-coordinates(YCOUNTY)
+plot(YCOUNTY)
+plot(list.queenY, coordsY, add=T)
+summary(list.queenY)
+
+```
+
+Using neighborhoods based on the k-nearest neighbor rule
+
+```{r}
+coords<-coordinates(YCOUNTY)
+IDs<-row.names(as(YCOUNTY, "data.frame"))
+plot(YCOUNTY)
+sids_kn10<-knn2nb(knearneigh(coords, k=10), row.names=IDs)
+plot(sids_kn10, coordsY, add=T)
+```
+
+```{r, eval = F}
+summary (sids_kn10)
+```
+
+House keeping task - Make sure we have valid data in all polygons
+
+One complication is that one of the block groups has NA in VMTpr
+I change this to zero to avoid missing data and loose a polygon
+
+```{r}
+summary(YCOUNTY@data$VMTpr)
+YCOUNTY@data$VMTpr[is.na(YCOUNTY@data$VMTpr)] <- 0
+summary(YCOUNTY@data$VMTpr)
+```
+
+
+
+Weights creation.  This is the matrix W from lecture notes.  We create two types of weights Queen and k=10 nearest neighbors weights
+
+
+
+Weights without  row standardization look like this
+
+$weights[[670]]
+[1] 1 1 1 1 1 1 1
+
+$weights[[671]]
+[1] 1 1 1 1 1 1 1
+
+$weights[[672]]
+[1] 1 1 1 1 1
+
+$weights[[673]]
+[1] 1 1 1 1 1
+
+$weights[[674]]
+[1] 1 1 1
+
+$weights[[675]]
+[1] 1 1 1 1 1 1
+
+$weights[[676]]
+[1] 1 1 1 1 1 1 1 1
+
+
+Weights with row standardization look like this (I get this out using head(weightsname)
+
+$weights[[679]]
+[1] 0.1428571 0.1428571 0.1428571 0.1428571 0.1428571 0.1428571 0.1428571
+
+$weights[[680]]
+[1] 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667
+
+$weights[[681]]
+[1] 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667
+
+$weights[[682]]
+[1] 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667
+
+$weights[[683]]
+[1] 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667
+
+$weights[[684]]
+[1] 0.25 0.25 0.25 0.25
+
+$weights[[685]]
+[1] 0.2 0.2 0.2 0.2 0.2
+
+$weights[[686]]
+[1] 0.2 0.2 0.2 0.2 0.2
+
+$weights[[687]]
+[1] 0.1111111 0.1111111 0.1111111 0.1111111 0.1111111 0.1111111 0.1111111 0.1111111 0.1111111
+
+
+Create weights using 0 and 1s for connectivity. 
+
+From spdep:
+nb2listw(neighbours, glist=NULL, style="codong type of weights", zero.policy=FALSE)
+
+The function adds a weights list with values given by the coding scheme style chosen. B is the basic binary coding, W is row standardised (sums over all links to n), C is globally standardised (sums over all links to n), U is equal to C divided by the number of neighbours (sums over all links to unity), while S is the variance-stabilizing coding scheme sums over all links to n.
+
+```{r}
+queen_w <- nb2listw(list.queenY, style="B")
+summary(queen_w)
+```
+
+Create weights using row standardized weights 
+
+```{r}
+queen_ws <- nb2listw(list.queenY)
+summary(queen_ws)
+```
+
+
+
+The same weight creation but using k nearest neighbor 
+
+```{r}
+sids_kn10_w<- nb2listw(sids_kn10)
+summary(sids_kn10_w)
+
+```
+
+
+I you use style="C"  gives equal weights to all connections and produces the following in terms of weights
+
+$weights[[671]]
+[1] 0.1582667 0.1582667 0.1582667 0.1582667 0.1582667 0.1582667 0.1582667
+
+$weights[[672]]
+[1] 0.1582667 0.1582667 0.1582667 0.1582667 0.1582667
+
+$weights[[673]]
+[1] 0.1582667 0.1582667 0.1582667 0.1582667 0.1582667
+
+$weights[[674]]
+[1] 0.1582667 0.1582667 0.1582667
+
+
+Autocorrelations at different lags using the defaults in sp.correlogram.  
+
+The question we ask is:  Do we see spatial correlation in the vehicle miles per person produce by each Censusblock groups?
+How far is this correlation extending?  What difference does it make to use weights using Queen continguity vs k-nearest neighbor continguity?
+
+The following are the plots from slides 57 and 58 of class notes
+
+```{r}
+mor10q <- sp.correlogram(list.queenY, var=YCOUNTY@data$VMTpr, order=10, method="I")
+plot(mor10q, main = "Moran's I with Queen Contiguity and Row Standardization")
+```
+```{r}
+
+mor10k <- sp.correlogram(sids_kn10, var=YCOUNTY@data$VMTpr, order=10, method="I", zero.policy=TRUE)  # need zero policy because some polygons are not connected
+plot(mor10k, main = "Moran I with knn10 Contiguity and Row Standardization")
+```
+
+
+```{r}
+ger10q <- sp.correlogram(list.queenY, var=YCOUNTY@data$VMTpr, order=10, method="C")
+plot(ger10q, main = "Geary's C with Queen Contiguity and Row Standardization")
+```
+
+```{r}
+ger10k <- sp.correlogram(sids_kn10, var=YCOUNTY@data$VMTpr, order=10, method="C", zero.policy=TRUE)  # need zero policy because some polygons are not connected
+plot(ger10k, main = "Geary's C with knn10 Contiguity and Row Standardization")
+```
+
+
+We can also create statstical tests for spatial correlation based on the z-scores
+
+The first uses a weights matrix that is derived from Queen continguity 
+using the default spatial weights row standardization and computing the variance 
+with analytical randomization
+
+```{r}
+
+moran.test(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY))
+
+```
+In the Table above
+
+```{r}
+standarddeviate=((0.2529411655-(-0.0009718173))/sqrt(0.0003225841))
+standarddeviate
+```
+
+This indicates that we have a strong spatial correlation 
+
+
+We repeat the same but this time we assume normality
+
+```{r}
+
+moran.test(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY), randomisation=FALSE)
+
+```
+
+The standard deviate is not very different from the previous result.  
+This usually happens when we have many units (the polygons)
+
+
+The next question is:  are there observations that have very high spatial correlations?
+
+
+spdep has a function called moran.plot.  This produces an object with some useful quantities
+For example it runs a regression of x (the variable we analyze) on wx (the weighted values of the neighbors of x)
+It also plots each x and wx pairs and the mean of x and wx
+
+Below we use Queen continuity and style="C" This weights up observations with many neighbors because all
+connections to all polygons take the same value.  Polygons with 6 connections will be influneced by 2 more neighbors than polygons with 4 connections (all weighted with the same value (0.15... we saw before))
+
+
+
+
+```{r}
+msp <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="C"), quiet=TRUE)
+title("Moran scatterplot Riverside")
+
+```
+
+The following code is from Bivand/Pebesma/Gomez-Rubio and extracts from object msp the influence of each pair x and wx in the regression of wx on x.  This is one way to identify which polygons influences more the global Moran's index 
+
+It also plots a map
+
+```{r}
+
+infl <- apply(msp$is.inf, 1, any)
+x <- YCOUNTY@data$VMTpr
+lhx <- cut(x, breaks=c(min(x), mean(x), max(x)), labels=c("L", "H"), include.lowest=TRUE)
+wx <- lag(nb2listw(list.queenY, style="C"), YCOUNTY@data$VMTpr)
+lhwx <- cut(wx, breaks=c(min(wx), mean(wx), max(wx)), labels=c("L", "H"), include.lowest=TRUE)
+lhlh <- interaction(lhx, lhwx, infl, drop=TRUE)
+cols <- rep(1, length(lhlh))
+cols[lhlh == "None"] <- 1
+cols[lhlh == "H.L.TRUE"] <- 2
+cols[lhlh == "L.H.TRUE"] <- 3
+cols[lhlh == "H.H.TRUE"] <- 4
+plot(YCOUNTY, col=brewer.pal(4, "Accent")[cols])
+# RSB quietening greys
+legend("topright", legend=c("None", "HL", "LH", "HH"), fill=brewer.pal(4, "Accent"), bty="n", cex=0.8, y.intersp=0.8)
+title("Block groups with influence")
+```
+
+Not very nice and cannot even tell where the polygons (blockgroups). Leaflet will do the job.
+
+First I define the colors and labels for the categories of influence and then build a map
+
+
+```{r}
+colsF <- factor(cols, labels=c("None", "HighLow", "LowHigh", "HighHigh"))
+LHpal <- colorFactor(topo.colors(4), colsF)
+popup <- paste0("<strong> BLOCKGROUP </strong>", IDs)
+leaflet(YCOUNTY) %>%
+  addPolygons(stroke = FALSE, smoothFactor = 0.2, fillOpacity = 0.7, popup=popup,
+              color = ~LHpal(colsF)) %>% addTiles() %>% addLegend("topright", pal = LHpal, values = ~colsF,
+                                                                   title = "Influence",
+                                                                   opacity = 1)
+```
+
+The definiton weights has a substantial impact on the influence of neighbors and ultimately on Moran's I
+From spdep:
+B is the basic binary coding, W is row standardised (sums over all links to n), C is globally standardised (sums over all links to n), U is equal to C divided by the number of neighbours (sums over all links to unity), while S is the variance-stabilizing coding scheme sums over all links to n.
+
+
+```{r}
+
+mspdefault <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY), quiet=TRUE)
+title("Moran scatterplot Riverside Default Style Default")
+
+```
+```{r}
+
+mspW <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="W"), quiet=TRUE)
+title("Moran scatterplot Riverside  Style W")
+```
+
+```{r}
+
+mspC <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="C"), quiet=TRUE)
+title("Moran scatterplot Riverside  Style C")
+
+```
+
+```{r}
+
+mspB <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="B"), quiet=TRUE)
+title("Moran scatterplot Riverside  Style B")
+
+```
+
+```{r}
+
+mspU <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="U"), quiet=TRUE)
+title("Moran scatterplot Riverside  Style U")
+
+```
+
+```{r}
+
+mspS <- moran.plot(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="S"), quiet=TRUE)
+title("Moran scatterplot Riverside  Style S")
+
+```
+
+The equation for local Moran's I (one of the Anselin LISA indicators) - see Gauchospace paper
+is below.  In this book Bivan et al show the denominator division by n not n-1.  Numerically does not matter.
+Division by n is the defaul in spdep
+
+$$ I_i = \frac{(x_i-\bar{x})}{{∑_{k=1}^{n}(x_k-\bar{x})^2}/(n-1)}{∑_{j=1}^{n}w_{ij}(x_j-\bar{x})} $$
+
+We get as many of these indicators as the number of units (blockgroups in our example)
+
+```{r}
+localM1 <- as.data.frame(localmoran(YCOUNTY@data$VMTpr, listw=nb2listw(list.queenY, style="C")))
+summary(localM1)
+```
+
+Store the Local Moran I and its zscores in the database
+```{r}
+YCOUNTY@data$localM1 <- localM1[,1]
+summary(YCOUNTY@data$localM1)
+YCOUNTY@data$zscoreM1 <- localM1[,4]
+summary(YCOUNTY@data$zscoreM1)
+```
+
+Map the observed x
+
+```{r}
+qpalreds <- colorNumeric(
+  palette = "Reds",
+  domain = CA.poly@data$VMTpr)
+
+leaflet(YCOUNTY) %>%
+  addPolygons(stroke = FALSE, fillOpacity = .8, smoothFactor = 0.2, 
+              color = ~qpalreds(VMTpr)) %>% addTiles() %>% addLegend("topright", pal = qpalreds, values = ~VMTpr,
+                                                                     title = "Observed Miles per Person",
+                                                                     labFormat = labelFormat(prefix = "Observed Miles per person day "),
+                                                                     opacity = 0.8)
+
+```
+
+```{r}
+qpalM <- colorNumeric(
+  palette = "Blues",
+  domain = CA.poly@data$localM1)
+
+leaflet(YCOUNTY) %>%
+  addPolygons(stroke = FALSE, fillOpacity = .8, smoothFactor = 0.2, 
+              color = ~qpalM(localM1)) %>% addTiles() %>% addLegend("topright", pal = qpalM, values = ~localM1,
+                                                                     title = "Local Moran I",
+                                                                     labFormat = labelFormat(prefix = "Local Moran I "),
+                                                                     opacity = 1.0)
+
+qpalZ <- colorNumeric(
+  palette = "Greens",
+  domain = CA.poly@data$zscoreM1)
+
+leaflet(YCOUNTY) %>%
+  addPolygons(stroke = FALSE, fillOpacity = .8, smoothFactor = 0.2, 
+              color = ~qpalZ(zscoreM1)) %>% addTiles() %>% addLegend("topright", pal = qpalZ, values = ~zscoreM1,
+                                                                       title = "Local Moran I Z score",
+                                                                       labFormat = labelFormat(prefix = "Local Moran I Z score "),
+                                                                       opacity = 0.9)
+
+```
+

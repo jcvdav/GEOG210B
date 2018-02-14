@@ -21,10 +21,10 @@ output: html_document
 - [Lecture 2](Lecture2.pdf) - Random variables and PDFs
 - [Lecture 3](Lecture3 - Linear regression intro.pdf) - Intro to linear regression
 - [Lecture 4](Lecture4 - Matrix.pdf) - Matrix notation and regression decomposition
-- [Lecture 5]() - 
-- [Lecture 6]() - 
-- [Lecture 7]() - 
-- [Lecture 8]() - 
+- [Lecture 5 & 6](Lecture5 - DiagnosticsGLS.pdf) - DiagnosticsGLS
+- [Lecture 7](Lecture7 - Discrete Data  Maximum Likelihood.pdf) - Discrete Data  Maximum Likelihood
+- [Lecture 8](Lecture8 - SpatialAnaylsis.pdf) - Spatial Analysis Part 1
+  - [Exteernal resources](http://www.lpc.uottawa.ca/publications/moransi/moran.htm)
 - [Lecture 9]() - 
 - [Lecture 10]() - 
 - [Lecture 11]() - 
