@@ -24,7 +24,7 @@ output: html_document
 - [Lecture 5 & 6](Lecture5 - DiagnosticsGLS.pdf) - DiagnosticsGLS
 - [Lecture 7](Lecture7 - Discrete Data  Maximum Likelihood.pdf) - Discrete Data  Maximum Likelihood
 - [Lecture 8](Lecture8 - SpatialAnaylsis.pdf) - Spatial Analysis Part 1
-  - [Exteernal resources](http://www.lpc.uottawa.ca/publications/moransi/moran.htm)
+    - [External resources](http://www.lpc.uottawa.ca/publications/moransi/moran.htm)
 - [Lecture 9]() - 
 - [Lecture 10]() - 
 - [Lecture 11]() - 
