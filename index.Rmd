@@ -14,6 +14,8 @@ output: html_document
 
 - [Assignment 1](./Assignments/Assig1/Assig1.pdf) - Intro to linear regression
     - [code](./Assignments/Assig1/Assig1.Rmd)
+- [Ássignment 2](./Assignments/Assig2/Assig2.pdf) - Matrix Linear Regression with R and Diagnostics
+    - [code](./Assignments/Assig2/Assig2.Rmd)
 
 # Lectures
 
@@ -32,3 +34,9 @@ output: html_document
 - [Lecture 13]() - 
 - [Lecture 14]() - 
 - [Lecture 15]() - 
+
+# Labs
+
+- [Lab 1](Labs/Lab1/Lab1.html)
+- [Lab 2](Labs/Lab2/Lab2.html)
+- [Lab 3](Labs/Lab3/Lab3.html)

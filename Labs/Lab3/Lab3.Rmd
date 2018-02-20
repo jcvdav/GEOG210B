@@ -1,3 +1,4 @@
+
 ---
 title: "Spatial Stats Part 1 new updated version"
 author: "Kostas Goulias"
@@ -15,7 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This is a shortened version of the lab instructions eliminating a few statwide analyses
 
+
+
 ### Part 1 Preliminary Work Setting Up Analysis of Census Block Groups
+
+
 
 A few important libraries for spatial analysis are:
 
@@ -34,8 +39,10 @@ library(RColorBrewer)
 Read the data by setting the directory to point at the right place
 You will need to download a shp file from Gauchospace and save it in this directory
 ```{r}
-CA.poly <- readShapePoly(fn = './shp/LPA_Pop_Char_bg.shp')
+CA.poly <- readShapePoly('./shp/LPA_Pop_Char_bg.shp')
 ```
+
+
 
 We use the function class to verify the we have a spatial polygons data frame
 ```{r}
@@ -62,13 +69,15 @@ A Spatial Polygon Data Frame has four components (in the R jargon these called s
 
   Component 1: Data contains the variables that are used in the analysis such as number of households with zero cars, vehicle miles of travel.  remember these are at the block group level
   
-```{r, eval = F}
+```{r}
 str(slot(CA.poly, "data"))
 summary(slot(CA.poly, "data"))
 ```
 This shows an output like : 'data.frame':	23198 obs. of  105 variables:
 
+
 Component 2:  This is the polygon slot and contains the “shape” information. 
+
 
 The following will create a map of all the polygons representing block groups
 ```{r}
@@ -77,7 +86,7 @@ plot(CA.poly)
 
 Analysis of the data in these blockgroups
 
-```{r, eval = F}
+```{r}
 summary(CA.poly)
 ```
 
@@ -89,9 +98,11 @@ The @ is used to access a specific slot of the spatial data frame
 Operations on a column of data is allowed as usual
 
 ```{r}
-summary(CA.poly@data$VMT)
+
+summary (CA.poly@data$VMT)
 CA.poly@data$VMTpr = CA.poly@data$VMT/CA.poly@data$n_pr
-summary(CA.poly@data$VMTpr)
+summary (CA.poly@data$VMTpr)
+
 ```
 
 
@@ -123,6 +134,9 @@ Test the residuals from this regression model
 library(lmtest)
 library(sandwich) # I need this for the robust vcov matrix
 ```
+
+
+
 
 ```{r}
 
@@ -159,7 +173,9 @@ TWOCOUNTY <- CA.poly[CA.poly@data$countyname== c("Riverside" , "Impreial"), ]
 For the class example I just want to work with one county
 
 ```{r}
+
 YCOUNTY <- CA.poly[CA.poly@data$countyname== c("Riverside"), ]
+
 ```
 
 Then I want to know what is in the data slot of this county
@@ -186,6 +202,8 @@ This model is different than what we got using the entire State (see the coeffic
 
 You can also do the BP and DW tests and see what you get but we can do some other more intersting things.
 
+
+
 Building Neighborhoods Using Contiguity Rules.  The example below uses queen moves (from Chess) to build links among block groups
 It also creates centroids as centers of "gravity"
 
@@ -193,7 +211,10 @@ In R this function is poly2nb
 
 This builds a neighbours list based on regions with contiguous boundaries.  queen=T allows even for a single polygon neighbor to meet the contiguity condition.
 
+
+
 ```{r}
+
 list.queenY<-poly2nb(YCOUNTY, queen=T)
 coordsY<-coordinates(YCOUNTY)
 plot(YCOUNTY)
@@ -205,6 +226,7 @@ summary(list.queenY)
 Using neighborhoods based on the k-nearest neighbor rule
 
 ```{r}
+
 coords<-coordinates(YCOUNTY)
 IDs<-row.names(as(YCOUNTY, "data.frame"))
 plot(YCOUNTY)
@@ -212,9 +234,10 @@ sids_kn10<-knn2nb(knearneigh(coords, k=10), row.names=IDs)
 plot(sids_kn10, coordsY, add=T)
 ```
 
-```{r, eval = F}
+```{r}
 summary (sids_kn10)
 ```
+
 
 House keeping task - Make sure we have valid data in all polygons
 
@@ -222,9 +245,11 @@ One complication is that one of the block groups has NA in VMTpr
 I change this to zero to avoid missing data and loose a polygon
 
 ```{r}
+
 summary(YCOUNTY@data$VMTpr)
 YCOUNTY@data$VMTpr[is.na(YCOUNTY@data$VMTpr)] <- 0
 summary(YCOUNTY@data$VMTpr)
+
 ```
 
 
@@ -294,6 +319,7 @@ nb2listw(neighbours, glist=NULL, style="codong type of weights", zero.policy=FAL
 
 The function adds a weights list with values given by the coding scheme style chosen. B is the basic binary coding, W is row standardised (sums over all links to n), C is globally standardised (sums over all links to n), U is equal to C divided by the number of neighbours (sums over all links to unity), while S is the variance-stabilizing coding scheme sums over all links to n.
 
+
 ```{r}
 queen_w <- nb2listw(list.queenY, style="B")
 summary(queen_w)
@@ -304,6 +330,8 @@ Create weights using row standardized weights
 ```{r}
 queen_ws <- nb2listw(list.queenY)
 summary(queen_ws)
+
+
 ```
 
 
@@ -558,4 +586,3 @@ leaflet(YCOUNTY) %>%
                                                                        opacity = 0.9)
 
 ```
-

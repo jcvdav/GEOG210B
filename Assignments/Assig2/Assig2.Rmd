@@ -1,0 +1,316 @@
+---
+title: "Assignment 2"
+subtitle: "Matrix Linear Regression with R and Diagnostics"
+author: "Juan Carlos Villaseñor-Derbez"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r, echo = F}
+suppressPackageStartupMessages({
+  library(matlib)
+  library(tidyverse)
+})
+```
+
+
+# Part 1
+
+Estimate a linear regression model with matrix algebra. The model coefficients are given by: 
+
+$$\hat{\beta} = (X'X)^{-1} (X'Y)$$
+
+Here, $X$ is the matrix:
+
+$$
+X = \left[\begin{array}{cccc}
+    1 & 2 & 43 & 1 \\
+    1 & 3 & 42 & 1 \\
+    1 & 1 & 43 & 1 \\
+    1 & 5 & 54 & 1 \\
+    1 & 9 & 61 & 0 \\
+    1 & 11 & 35 & 0 \\
+    1 & 11 & 52 & 0 \\
+    1 & 11 & 86 & 0 \\
+    1 & 12 & 45 & 0 \\
+    1 & 12 & 44 & 0 \\
+    1 & 12 & 34 & 0 \\
+\end{array}\right]
+$$
+
+
+And $Y$ is given by:
+
+$$
+Y = \left[\begin{array}{c}
+4 \\
+7 \\
+3 \\
+9 \\
+17 \\
+27 \\
+13 \\
+121 \\
+10 \\
+11 \\
+23
+\end{array}\right]
+$$
+
+Define X and Y:
+
+```{r}
+x1 <- rep(1L, 11)
+x2 <- c(2L, 3L, 1L, 5L, 9L, 11L, 11L, 11L, 12L, 12L, 12L)
+x3 <- c(43L, 42L, 43L, 54L, 61L, 35L, 52L, 86L, 45L, 44L, 34L)
+x4 <- c(1L, 1L, 1L, 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+
+X <- cbind(x1, x2, x3, x4)
+
+Y <- c(4L, 7L, 3L, 9L, 17L, 27L, 13L, 121L, 10L, 11L, 23L)
+```
+
+Calculate $X'$:
+
+```{r}
+XT <- t(X)
+```
+
+$$
+X' =
+\left[\begin{array}{ccccccccccc}
+1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 \\
+2 & 3 & 1 & 5 & 9 & 11 & 11 & 11 & 12 & 12 & 12 \\
+43 & 42 & 43 & 54 & 61 & 35 & 52 & 86 & 45 & 44 & 34 \\
+1 & 1 & 1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0
+\end{array}\right]
+$$
+
+Calculate $X'X$:
+
+```{r}
+XTX <- XT %*% X
+```
+
+
+$$
+X'X = 
+\left[\begin{array}{ccccccccccc}
+1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 \\
+2 & 3 & 1 & 5 & 9 & 11 & 11 & 11 & 12 & 12 & 12 \\
+43 & 42 & 43 & 54 & 61 & 35 & 52 & 86 & 45 & 44 & 34 \\
+1 & 1 & 1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0
+\end{array}\right]
+\times
+\left[\begin{array}{cccc}
+    1 & 2 & 43 & 1 \\
+    1 & 3 & 42 & 1 \\
+    1 & 1 & 43 & 1 \\
+    1 & 5 & 54 & 1 \\
+    1 & 9 & 61 & 0 \\
+    1 & 11 & 35 & 0 \\
+    1 & 11 & 52 & 0 \\
+    1 & 11 & 86 & 0 \\
+    1 & 12 & 45 & 0 \\
+    1 & 12 & 44 & 0 \\
+    1 & 12 & 34 & 0 \\
+\end{array}\right]
+$$
+
+$$
+X'X = \left[
+  \begin{array}{cccc}
+    11 & 89 & 539 & 4 \\
+    89 & 915 & 4453 & 11 \\
+    539 & 4453 & 28541 & 182 \\
+    4 & 11 & 182 & 4
+  \end{array}
+\right]
+$$
+
+Calculate $(X'X)^{-1}$:
+
+```{r}
+XTXi <- inv(XTX)
+```
+
+$$
+(X'X)^{-1} = \left[
+  \begin{array}{cccc}
+    11 & 89 & 539 & 4 \\
+    89 & 915 & 4453 & 11 \\
+    539 & 4453 & 28541 & 182 \\
+    4 & 11 & 182 & 4
+  \end{array}
+\right]^{-1}
+$$
+
+$$
+(X'X)^{-1} = \left[
+  \begin{array}{cccc}
+10.47 & -0.77 & -0.03 & -6.79 \\
+-0.77 &  0.06 &  0 &  0.55 \\
+-0.03 &  0 &  0 &  0 \\
+-6.79 &  0.55 &  0 &  5.08 \\
+  \end{array}
+\right]
+$$
+\clearpage
+
+Now we need $X'Y$
+
+```{r}
+XTY <- XT %*% Y
+```
+
+$$
+X'Y = 
+\left[\begin{array}{ccccccccccc}
+1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 \\
+2 & 3 & 1 & 5 & 9 & 11 & 11 & 11 & 12 & 12 & 12 \\
+43 & 42 & 43 & 54 & 61 & 35 & 52 & 86 & 45 & 44 & 34 \\
+1 & 1 & 1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0
+\end{array}\right]
+\times
+\left[\begin{array}{c}
+4 \\
+7 \\
+3 \\
+9 \\
+17 \\
+27 \\
+13 \\
+121 \\
+10 \\
+11 \\
+23
+\end{array}\right]
+$$
+
+$$
+X'Y = \left[\begin{array}{c}
+245 \\
+2529 \\
+15861 \\
+23
+\end{array}\right]
+$$
+
+Finally, multiply $(X'X)^{-1} \times (X'Y)$ to get $\hat\beta$:
+
+```{r}
+beta <- XTXi %*% XTY
+```
+
+$$
+\begin{split}
+\hat{\beta} &= (X'X)^{-1} \times (X'Y) \\
+ &= \left[
+  \begin{array}{cccc}
+10.47 & -0.77 & -0.03 & -6.79 \\
+-0.77 &  0.06 &  0 &  0.55 \\
+-0.03 &  0 &  0 &  0 \\
+-6.79 &  0.55 &  0 &  5.08 \\
+  \end{array}
+\right] \times
+ \left[\begin{array}{c}
+245 \\
+2529 \\
+15861 \\
+23
+\end{array}\right] \\
+ & =  \left[\begin{array}{c}
+-82.32 \\
+2.31 \\
+1.72 \\
+2.98
+\end{array}\right]
+\end{split}
+$$
+
+\clearpage
+
+We can compare these results to what we would have obtained using the `lm` function:
+
+```{r, results = "asis"}
+lm(formula = Y ~ X - 1) %>% 
+  stargazer::stargazer(single.row = T,
+                       header = F,
+                       title = "Regression coefficients estimated with the lm function")
+```
+
+\clearpage
+
+# Part 2
+
+## Estimate model from part 3 in Assignment 1
+
+\begin{multline}
+HTRIPS = \beta_0 + \beta_2 HHSIZ + \beta_3 HHVEH + \beta_4 TrpPrs + \beta_5 INCOM \\ + \beta_6 Mon + \beta_7 Tue + \beta_8 Wed + \beta_9 Thu + \beta_{10} Fri + \beta_{11} Sat +\epsilon
+\end{multline}
+
+```{r}
+SmallHHfile <- read_csv("../../Labs/Lab1/SmallHHfile.csv", col_types = cols())
+
+model <- lm(formula = HTRIPS ~ HHSIZ + HHVEH + TrpPrs +INCOM
+             + Mon + Tue + Wed + Thu + Fri + Sat , data = SmallHHfile)
+```
+
+## Regression table
+
+```{r, results = "asis"}
+stargazer::stargazer(model, single.row = T, header = F)
+```
+
+\clearpage
+
+## Summary of the model
+
+```{r}
+summary(model)
+```
+
+## ANOVA
+
+```{r}
+anova(model)
+```
+
+## 	Overall	Significance	of	the	Multiple Regression	Model
+
+$$H_0 = \beta_0 = \beta_1 = ... = \beta_i = 0$$
+
+$$H_1 = \text{at least one} \beta_i \neq 0$$
+
+```{r}
+(F_wald <- lmtest::waldtest(model))
+```
+
+This indicates that at least one of the coefficients is different from zero (`r paste0("F(df = ", F_wald$Res.Df[2]-F_wald$Res.Df[1], "; ", F_wald$Res.Df[1],") = ", formatC(F_wald$F[2], digits = 2, format = "f"))`; $p<0.001$).
+
+## Test for significance on each coefficient
+
+Even by trying differe,t white's corrections, the results are not greatly different than when not accounting for Heteroskedasticity-consistent variance-covariance matrix
+
+```{r}
+lmtest::coeftest(x = model, vcov = sandwich::vcovHC(model, type = "HC4"))
+```
+
+\clearpage
+
+## Breusch-Pagan Test for heteroskedstic errors
+
+Test results indicate we have heteroskedastic errors in this model:
+
+```{r}
+lmtest::bptest(model, studentize = T)
+```
+
+## Durbin-Watson Test for autocorrelation
+
+This model indicates no autocorrelation (DW = 1.994, $p = 0.26$).
+
+```{r}
+lmtest::dwtest(model)
+```
+
