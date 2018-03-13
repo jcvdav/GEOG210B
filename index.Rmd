@@ -14,8 +14,15 @@ output: html_document
 
 - [Assignment 1](./Assignments/Assig1/Assig1.pdf) - Intro to linear regression
     - [code](./Assignments/Assig1/Assig1.Rmd)
-- [Ássignment 2](./Assignments/Assig2/Assig2.pdf) - Matrix Linear Regression with R and Diagnostics
+    
+- [Assignment 2](./Assignments/Assig2/Assig2.pdf) - Matrix Linear Regression with R and Diagnostics
     - [code](./Assignments/Assig2/Assig2.Rmd)
+
+- [Assignment 3](./Assignments/Assig3/Assig3.pdf) - Matrix Linear Regression with R and Diagnostics
+    - [code](./Assignments/Assig3/Assig3.Rmd)
+
+- [Assignment 4](./Assignments/Assig4/Assig4.pdf) - Matrix Linear Regression with R and Diagnostics
+    - [code](./Assignments/Assig4/Assig4.Rmd)
 
 # Lectures
 
@@ -27,10 +34,12 @@ output: html_document
 - [Lecture 7](Lecture7 - Discrete Data  Maximum Likelihood.pdf) - Discrete Data  Maximum Likelihood
 - [Lecture 8](Lecture8 - SpatialAnaylsis.pdf) - Spatial Analysis Part 1
     - [External resources](http://www.lpc.uottawa.ca/publications/moransi/moran.htm)
-- [Lecture 9]() - 
-- [Lecture 10]() - 
-- [Lecture 11]() - 
-- [Lecture 12]() - 
+    
+- [Lecture 9](Lecture9 - SpatialRegressionClassNotesFeb20.pdf) -Spatial regression
+- [Lecture 10](Lecture10 - CountData.pdf) - Count data
+- [Lecture 11](Lecture11 - SpatialPointsAnalysistoPost.pdf) - Spatial Point Analysis
+- [Lecture 12](Lecture12.1 - IsaacsSrivastavaOrdKrigtoPost.pdf) - Kriging
+- [Lecture 13](Lecture12.2 - GeostatisticsPart2topost.pdf) -  Geostats
 - [Lecture 13]() - 
 - [Lecture 14]() - 
 - [Lecture 15]() - 

@@ -1,0 +1,206 @@
+---
+title: "Assignment 2"
+subtitle: "Spatial Regression Models"
+author: "Juan Carlos Villaseñor-Derbez"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,
+                      fig.height = 4,
+                      fig.width = 6,
+                      warning = F,
+                      message = F)
+```
+
+```{r, echo = F}
+suppressPackageStartupMessages({
+  library(spdep)
+  library(maptools)
+  library(sf)
+  library(cowplot)
+  library(tidyverse)
+})
+```
+
+
+```{r}
+riverside <- read_sf(dsn = "./shp", layer = "LPA_Pop_Char_bg") %>% 
+  filter(countyname == "Riverside") %>% 
+  mutate(location = case_when(LPAgrp == 0 ~ "None",
+                              LPAgrp == 1 ~ "Rural",
+                              LPAgrp == 2 ~ "Exurb",
+                              LPAgrp == 3 ~ "Suburb",
+                              TRUE ~ "Center"),
+         LPAgrp = fct_relevel(location, "Center", "Suburb", "Exurb", "Rural"))
+```
+
+# Visualize the data
+
+```{r, fig.height = 2, fig.width = 6}
+ggplot(riverside) +
+  geom_sf(aes(fill = drvalM), color = "transparent") +
+  theme_minimal() +
+  scale_y_continuous(breaks = c(33.5, 34)) +
+  scale_fill_gradientn(colors = colorRamps::matlab.like(20))
+```
+
+\clearpage
+
+# Fit the models
+
+## Non spatial OLS
+
+The model is specified by:
+
+$$drvalM = \beta_0 + \sum_{s = 1}^7\sigma_sHHSIZE_s+\sum_{v = 1}^8\gamma_v HHVEH_v + \sum_{l = 1}^4\lambda_lLPAgrp_l +\epsilon$$
+
+Which assumes that outcome variables are a function of household size, household vehicles, and location of the block group
+
+```{r}
+frmla <- formula("drvalM ~ HHSIZE1 + HHSIZE2 + HHSIZE3 + HHSIZE4 +
+                 HHSIZE5 + HHSIZE6 + HHSIZE7 + HHVEH1 + HHVEH2 +
+                 HHVEH3 + HHVEH4 + HHVEH5 + HHVEH6 + HHVEH7 + HHVEH8 + LPAgrp")
+
+NonSpOLS <- lm(formula = frmla, data = riverside)
+```
+
+## Define 10 nearest neighbors for spatial models
+
+```{r}
+ids <- rownames(riverside)
+
+knn <- riverside %>% 
+  as("Spatial") %>% 
+  coordinates() %>% 
+  knearneigh(k=10) %>% 
+  knn2nb(knn = ., row.names = ids) %>% 
+  nb2listw(style = "W")
+```
+
+## Spatial Lag
+
+The spatial lag model assumes that, in addition to variables in the ordinary least squares regression, the $Y$ values of a blockgroup are also influenced by the $Y$ values of their neighboring block groups.
+
+$$drvalM = \beta_0 + \sum_{s = 1}^7\sigma_sHHSIZE_s+\sum_{v = 1}^8\gamma_v HHVEH_v + \sum_{l = 1}^4\lambda_lLPAgrp_l +\rho WY + \epsilon$$
+
+```{r}
+SpLag <- lagsarlm(formula = frmla, data = riverside, listw = knn)
+```
+
+## Spatial Error
+
+The spatial error model assumes that the observations of $Y$ are correlated with the neighboring block groups' errors. That is, the $\epsilon$ term in the non-spatial regression model is correlated with $]epslion$ of the neighbors. Thismodel is specified as
+
+$$drvalM = \beta_0 + \sum_{s = 1}^7\sigma_sHHSIZE_s+\sum_{v = 1}^8\gamma_v HHVEH_v + \sum_{l = 1}^4\lambda_lLPAgrp_l + \upsilon$$
+
+Where $\upsilon$ is given by $\lambda W \upsilon + \epsilon$
+
+These first three models can be examined in table 1.
+
+```{r}
+SpaErr <- errorsarlm(formula = frmla, data = riverside, listw = knn)
+```
+
+## SARAR
+
+Finally, the SARAR model assumes that $Y$ is explained by a set of explanatory variables, neighboring $Y$s and neighboring errors:
+
+$$drvalM = \beta_0 + \sum_{s = 1}^7\sigma_sHHSIZE_s+\sum_{v = 1}^8\gamma_v HHVEH_v + \sum_{l = 1}^4\lambda_lLPAgrp_l +\rho WY + \upsilon$$
+
+Where $\upsilon$ is given by $\lambda W \upsilon + \epsilon$
+
+```{r}
+sarar <- sacsarlm(formula = frmla, data = riverside, listw = knn)
+```
+
+## Spatial Lag with Lagged explanatory variables
+
+```{r}
+SpLagLag <- lagsarlm(formula = frmla, data = riverside, listw = knn, type= "mixed")
+```
+
+
+## SARAR with Lagged explanatory variables
+
+```{r}
+sararlag <- sacsarlm(formula = frmla, data = riverside, listw = knn, type= "sacmixed")
+```
+
+# Model interpretations and findings
+
+Overall model interpretation is very similar. While the `impacts` function provides a more clear interpretation of the effects by separating the direct from the indirect interactions, we can visualize the effects with a termplot (Figure 2). Full model coefficients and goodness of fit are provided in table 1 and the printed `impacts`.
+
+We observe that groupblock where households are located further away, have higher values of `drvalM` (Fig 2A). The SARAR and SARAR lagged model have higer estimates for these coefficients. Household size has different effects on `drvalM` (Fig 2B). We observe that households made up from 1 and 2 people drive less. Then, households made of 3 and 4 people drive more, and then the estimate is again reduced. Increasing the number of vehicles in a household block group also resulted in increases in `drvalM`, with exception of households with 7 vehicles (Fig 2C).
+
+\clearpage
+
+# Comparing the models
+
+```{r, fig.width = 5, fig.height = 8, echo = F}
+get_terms <- function(model){
+  tibble(term = names(coef(model)), estimate = coef(model)) %>% 
+    filter(!term %in% c("rho", "lambda")) %>% 
+    mutate(std.error = model$rest.se)
+}
+
+spatial <- list(c(SpLag, y = "SpLag"), c(SpaErr, y = "SpErr"), c(sarar, y = "SARAR"), c(SpLagLag, "SPLAGLAG"), c(sararlag, y = "SARARlag")) %>% 
+  map_df(get_terms) %>% 
+  mutate(model = c(rep("SpLag", 19), rep("SpErr", 19), rep("SARAR", 19), rep("SARARlaglag", 37), rep("SARARlag", 37)))
+
+pd <- position_dodge(width = 0.5)
+
+LPAgrp <- broom::tidy(NonSpOLS) %>% 
+  select(term, estimate, std.error) %>% 
+  mutate(model = "NonSpOLS") %>% 
+  rbind(spatial) %>% 
+  filter(grepl(pattern = "LPAgrp", x = term),
+         !grepl(pattern = "lag", x = term)) %>% 
+  ggplot(aes(x = term, y = estimate, color = model, fill = model)) +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error), width = 0, size = 1, position = pd) +
+  geom_point(size = 3, shape = 21, color = "black", position = pd) +
+  coord_flip() +
+  theme(legend.position = "none")
+
+HHsize <- broom::tidy(NonSpOLS) %>% 
+  select(term, estimate, std.error) %>% 
+  mutate(model = "NonSpOLS") %>% 
+  rbind(spatial) %>% 
+  filter(grepl(pattern = "HHSIZE", x = term),
+         !grepl(pattern = "lag", x = term)) %>% 
+  ggplot(aes(x = term, y = estimate, color = model, fill = model)) +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error), width = 0, size = 1, position = pd) +
+  geom_point(size = 3, shape = 21, color = "black", position = pd) +
+  coord_flip() +
+  theme(legend.position = c(0,0.5))
+
+HHveh <- broom::tidy(NonSpOLS) %>% 
+  select(term, estimate, std.error) %>% 
+  mutate(model = "NonSpOLS") %>% 
+  rbind(spatial) %>% 
+  filter(grepl(pattern = "HHVEH", x = term),
+         !grepl(pattern = "lag", x = term)) %>% 
+  ggplot(aes(x = term, y = estimate, color = model, fill = model)) +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error), width = 0, size = 1, position = pd) +
+  geom_point(size = 3, shape = 21, color = "black", position = pd) +
+  coord_flip() +
+  theme(legend.position = "none")
+
+cowplot::plot_grid(LPAgrp, HHsize, HHveh, ncol = 1, labels = "AUTO")
+
+```
+
+```{r, results = "asis", echo = F}
+stargazer::stargazer(NonSpOLS, SpLag, SpaErr,
+                     single.row = T,
+                     type = "latex", header = F, title = "Coefficient estimates for a non-spatial OLS regression, a regression with spatial lags, and a regression with spatial errors. Type of model is indicated above each column.")
+```
+
+\clearpage
+
+```{r}
+impacts(sarar, listw = knn)
+impacts(SpLagLag, listw = knn)
+impacts(sararlag, listw = knn)
+```
