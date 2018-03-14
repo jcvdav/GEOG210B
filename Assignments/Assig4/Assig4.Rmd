@@ -223,6 +223,7 @@ k1 <- SAMPLE1 %>%
   st_as_sf() %>% 
   sfc_as_cols() %>% 
   st_set_geometry(NULL) %>% 
+  filter(z > 0) %>% 
   ggplot() +
   geom_raster(aes(x = x, y = y, fill = z), interpolate = T) +
   scale_fill_gradientn(colors = colorRamps::matlab.like(50)) +
@@ -241,6 +242,7 @@ k2 <- SAMPLE2 %>%
   st_as_sf() %>% 
   sfc_as_cols() %>% 
   st_set_geometry(NULL) %>% 
+  filter(z > 0) %>% 
   ggplot() +
   geom_raster(aes(x = x, y = y, fill = z), interpolate = T) +
   scale_fill_gradientn(colors = colorRamps::matlab.like(50)) +
