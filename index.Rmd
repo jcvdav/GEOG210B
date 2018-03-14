@@ -1,14 +1,12 @@
 ---
-title: "GEOG 210B"
+title: "GEOG 210B - Analytical Methods in Geography II"
 subtitle: "Class notes"
 author: "Juan Carlos Villaseñor-Derbez"
 output: html_document
 ---
 
-# Labs
-
-- [Lab 1](./Labs/Lab1/Lab1.html) - Intro to R and R Studio
-- [Lab 2](./Labs/Lab2/Lab2.html) - Intro to linear regression
+<div class = "row">
+<div class = "col-md-6">
 
 # Assignments
 
@@ -23,6 +21,15 @@ output: html_document
 
 - [Assignment 4](./Assignments/Assig4/Assig4.pdf) - Matrix Linear Regression with R and Diagnostics
     - [code](./Assignments/Assig4/Assig4.Rmd)
+
+# Labs
+
+- [Lab 1](./Labs/Lab1/Lab1.html) - Intro to R and R Studio
+- [Lab 2](./Labs/Lab2/Lab2.html) - Intro to linear regression
+- [Lab 3](Labs/Lab3/Lab3.html)
+
+</div>
+<div class = "col-md-6">
 
 # Lectures
 
@@ -44,8 +51,6 @@ output: html_document
 - [Lecture 14]() - 
 - [Lecture 15]() - 
 
-# Labs
 
-- [Lab 1](Labs/Lab1/Lab1.html)
-- [Lab 2](Labs/Lab2/Lab2.html)
-- [Lab 3](Labs/Lab3/Lab3.html)
+</div>
+</div>
